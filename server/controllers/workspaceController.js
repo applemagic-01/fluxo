@@ -9,22 +9,59 @@ export const getUserWorkspaces = async (req, res) => {
                 members: {
                     some: { userId: userId }
                 },
-                include: {
-                    members: { include: { user: true } },
-                    projects: {
-                        include: {
-                            tasks: { include: { assignee: true, comments: { include: { user: true } } } },
-                            members:{include:{user:true}}
-                        }
+            },
+            include: {
+                members: { include: { user: true } },
+                projects: {
+                    include: {
+                        tasks: { include: { assignee: true, comments: { include: { user: true } } } },
+                        members:{include:{user:true}}
                     }
-                },
-                owner:true
-            }
+                }
+            },
         });
         res.json(workspaces)
     } catch (error) {
         console.log(error)
         res.status(500).json({ message:error.code || error.message });
+    }
+}
+
+//create a new workspace
+export const createWorkspace = async (req, res) => {
+    try {
+        const { userId } = await req.auth();
+        const { name, organizationId } = req.body;
+
+        if (!name || !organizationId) {
+            return res.status(400).json({ message: 'Workspace name and organization ID are required' });
+        }
+
+        const newWorkspace = await prisma.workspace.create({
+            data: {
+                name,
+                organizationId,
+                members: {
+                    create: {
+                        userId,
+                        role: 'ADMIN',
+                    },
+                },
+            },
+            include: {
+                members: { include: { user: true } },
+                projects: {
+                    include: {
+                        tasks: { include: { assignee: true, comments: { include: { user: true } } } },
+                        members:{include:{user:true}}
+                    }
+                }
+            },
+        });
+        res.status(201).json(newWorkspace);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: error.code || error.message });
     }
 }
 
