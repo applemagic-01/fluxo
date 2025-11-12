@@ -1,9 +1,18 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { dummyWorkspaces } from "../assets/assets";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+
+export const fetchWorkspaces = createAsyncThunk('workspace/fetchWorkspaces', async ({ getToken }) => {
+    try {
+        const { data } = await api.get('/api/workspaces', { headers: { 'Authorization': `Bearer ${await getToken()}` } })
+        return data.workspaces || [];
+    } catch (error) {
+        console.log(error?.response?.data?.message || error?.message)
+        return [];
+    }
+})
 
 const initialState = {
-    workspaces: dummyWorkspaces || [],
-    currentWorkspace: dummyWorkspaces[1],
+    workspaces: [],
+    currentWorkspace: null,
     loading: false,
 };
 
@@ -20,7 +29,6 @@ const workspaceSlice = createSlice({
         },
         addWorkspace: (state, action) => {
             state.workspaces.push(action.payload);
-
             // set current workspace to the new workspace
             if (state.currentWorkspace?.id !== action.payload.id) {
                 state.currentWorkspace = action.payload;
@@ -30,7 +38,6 @@ const workspaceSlice = createSlice({
             state.workspaces = state.workspaces.map((w) =>
                 w.id === action.payload.id ? action.payload : w
             );
-
             // if current workspace is updated, set it to the updated workspace
             if (state.currentWorkspace?.id === action.payload.id) {
                 state.currentWorkspace = action.payload;
@@ -103,6 +110,31 @@ const workspaceSlice = createSlice({
             );
         }
 
+    },
+    extraReducers: (builder) => {
+        builder.addCase(fetchWorkspaces.pending, (state) => {
+            state.loading = true;
+        })
+        builder.addCase(fetchWorkspaces.fulfilled, (state, action) => {
+            state.loading = false;
+            state.workspaces = action.payload;
+            if(action.payload.length > 0) {
+                const localCurrentWorkspaceId = localStorage.getItem("currentWorkspaceId");
+                if(localCurrentWorkspaceId){
+                    const findWorkspace = action.payload.find((w) => w.id === localCurrentWorkspaceId);
+                    if(findWorkspace){
+                        state.currentWorkspace = findWorkspace;
+                    }else{
+                        state.currentWorkspace = action.payload[0];
+                    }
+                }else{
+                    state.currentWorkspace = action.payload[0];
+                }
+            }
+        });
+        builder.addCase(fetchWorkspaces.rejected, (state) => {
+            state.loading = false;
+        })
     }
 });
 
