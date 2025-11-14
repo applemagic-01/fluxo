@@ -14,7 +14,7 @@ export const createProject = async (req, res) => {
 
             },
             include: {
-                memebers: { include: { include: { user: true } } }
+                members:  { include: { user: true }  }
             }
         })
 
@@ -22,7 +22,7 @@ export const createProject = async (req, res) => {
             return res.status(404).json({ message: "Workspace not found" })
         }
 
-        if (!workspace.memebers.some((memeber) => memeber.userId === userId && memeber.role === 'ADMIN')) {
+        if (!workspace.members.some((member) => member.userId === userId && member.role === 'ADMIN')) {
             return res.status(404).json({ message: "You are not authorized to create a project in this workspace" })
         }
         //get team lead using email
@@ -57,9 +57,9 @@ export const createProject = async (req, res) => {
         //add team members to project
         if (team_members?.length > 0) {
             const membersToAdd = []
-            workspace.memebers.forEach(memeber => {
-                if (team_members.includes(memeber.userId.email)) {
-                    membersToAdd.push(memeber.user.id)
+            workspace.members.forEach(member => {
+                if (team_members.includes(member.userId.email)) {
+                    membersToAdd.push(member.user.id)
                 }
             })
             await prisma.projectMember.createMany({
@@ -99,7 +99,7 @@ export const updateProject = async (req, res) => {
 
             },
             include: {
-                memebers: { include: { include: { user: true } } }
+                members: { include: { user: true } }
             }
         })
 
@@ -107,7 +107,7 @@ export const updateProject = async (req, res) => {
             return res.status(404).json({ message: "Workspace not found" })
         }
 
-        if (!workspace.memebers.some((memeber) => memeber.userId === userId && memeber.role === 'ADMIN')) {
+        if (!workspace.members.some((member) => member.userId === userId && member.role === 'ADMIN')) {
             const project = await prisma.project.findUnique({
                 where: {
                     id

@@ -1,8 +1,8 @@
-//create task
 
 import prisma from "../configs/prisma.js";
 import { inngest } from "../inngest/index.js";
 
+//create task
 export const createTask = async (req, res) => {
     try {
         const { userId } = await req.auth();
@@ -25,10 +25,11 @@ export const createTask = async (req, res) => {
 
         const task = await prisma.task.create({
             data: {
-                project,
+                projectId,
                 title,
                 description,
                 priority,
+                type,
                 assigneeId,
                 status,
                 due_date: new Date(due_date)
@@ -76,7 +77,7 @@ export const updateTask = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to update a task in this project" })
         }
 
-        const updatedTask = await prisma.task.update({
+        const updateTask = await prisma.task.update({
             where:{id:req.params.id},
             data:req.body
         })
