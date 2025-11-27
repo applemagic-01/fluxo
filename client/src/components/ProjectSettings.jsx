@@ -1,6 +1,7 @@
 import { format } from "date-fns";
-import { Plus, Save } from "lucide-react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddProjectMember from "./AddProjectMember";
 import { useDispatch } from "react-redux";
 import { useAuth } from "@clerk/clerk-react";
@@ -11,7 +12,8 @@ import { fetchWorkspaces } from "../features/workspaceSlice";
 export default function ProjectSettings({ project }) {
 
     const dispatch = useDispatch();
-    const {getToken} = useAuth()
+    const navigate = useNavigate();
+    const { getToken } = useAuth()
 
     const [formData, setFormData] = useState({
         name: "New Website Launch",
@@ -31,16 +33,34 @@ export default function ProjectSettings({ project }) {
         setIsSubmitting(true);
         toast.loading("Saving")
         try {
-            const {data} = await api.put('/api/projects',formData,{headers:{"Authorization":`Bearer ${await getToken()}`}})
+            const { data } = await api.put('/api/projects', formData, { headers: { "Authorization": `Bearer ${await getToken()}` } })
             setIsDialogOpen(false);
-            dispatch(fetchWorkspaces({getToken}));
+            dispatch(fetchWorkspaces({ getToken }));
             toast.dismissAll();
             toast.success(data.message);
         } catch (error) {
             toast.dismissAll();
             toast.error(error?.response?.data?.message || error.message);
-        }finally{
+        } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+            return;
+        }
+        toast.loading("Deleting project...");
+        try {
+            await api.delete(`/api/projects/${project.id}`, {
+                headers: { "Authorization": `Bearer ${await getToken()}` }
+            });
+            toast.dismissAll();
+            toast.success("Project deleted successfully");
+            navigate('/'); // Redirect to dashboard or projects list
+        } catch (error) {
+            toast.dismissAll();
+            toast.error(error?.response?.data?.message || error.message);
         }
     };
 
@@ -144,6 +164,21 @@ export default function ProjectSettings({ project }) {
                             ))}
                         </div>
                     )}
+                </div>
+
+                {/* Danger Zone */}
+                <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 p-6">
+                    <h2 className="text-lg font-medium text-red-900 dark:text-red-400 mb-2">Danger Zone</h2>
+                    <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+                        Once you delete a project, there is no going back. Please be certain.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors"
+                    >
+                        <Trash2 className="size-4" /> Delete Project
+                    </button>
                 </div>
             </div>
         </div>

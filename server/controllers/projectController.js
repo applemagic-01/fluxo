@@ -14,7 +14,7 @@ export const createProject = async (req, res) => {
 
             },
             include: {
-                members:  { include: { user: true }  }
+                members: { include: { user: true } }
             }
         })
 
@@ -172,19 +172,56 @@ export const addMember = async (req, res) => {
                 email
             }
         })
-        if(!user){
-            return res.status(404).json({message:"User not founf"})
+        if (!user) {
+            return res.status(404).json({ message: "User not founf" })
         }
         const member = await prisma.projectMember.create({
-            data:{
-                userId:user.id,
+            data: {
+                userId: user.id,
                 projectId
             }
         })
-        res.json({member,message:"Member added successfully"})
+        res.json({ member, message: "Member added successfully" })
 
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: error.code || error.message })
     }
 }
+
+// delete project
+export const deleteProject = async (req, res) => {
+    try {
+        const { userId } = await req.auth();
+        const { id } = req.params;
+
+        const project = await prisma.project.findUnique({
+            where: { id },
+            include: { workspace: { include: { members: true } } }
+        });
+
+        if (!project) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+
+        // Check authorization: Workspace Admin or Team Lead
+        const isWorkspaceAdmin = project.workspace.members.some(
+            member => member.userId === userId && member.role === 'ADMIN'
+        );
+        const isTeamLead = project.team_lead === userId;
+
+        if (!isWorkspaceAdmin && !isTeamLead) {
+            return res.status(403).json({ message: "You are not authorized to delete this project" });
+        }
+
+        await prisma.project.delete({
+            where: { id }
+        });
+
+        res.json({ message: "Project deleted successfully" });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: error.code || error.message });
+    }
+};
